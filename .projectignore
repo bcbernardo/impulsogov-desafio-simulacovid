@@ -14,4 +14,4 @@ __pycache__/
 .ipynb_checkpoints/
 
 # VSCode workspace settings
-/.code-workspace
+.vscode/
