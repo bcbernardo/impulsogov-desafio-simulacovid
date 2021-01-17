@@ -1,8 +1,9 @@
+<<<<<<< HEAD
 # project-local contains personal configuration choices and state
 /anaconda-project-local.yml
 
 # Files autocreated by Python
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
 *.pyd
@@ -11,7 +12,7 @@ __pycache__/
 .pytest_cache/
 
 # Notebook stuff
-.ipynb_checkpoints/
+.ipynb_checkpoints
 
 # VSCode workspace settings
 .vscode/

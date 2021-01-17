@@ -149,8 +149,13 @@ Outros pontos de atenção foram encontrados por meio da [revisão de publicaç�
 
 ## Licença
 
-Copyright 2020 Bernardo Chrispim Baron
+Copyright 2021 Impulso, Bernardo Chrispim Baron
+
+Este repositório utiliza o código fonte disponibilizado pela ImpulsoGov
+no repositório [techdados_desafio_datascience].
 
 O uso deste código fonte é regida por uma licença do tipo MIT, que pode ser
 encontrada no arquivo [LICENSE](./LICENSE) ou em
 <https://opensource.org/licenses/MIT>.
+
+[techdados_desafio_datascience]: https://github.com/ImpulsoGov/techdados_desafio_datasience
