@@ -61,41 +61,41 @@ def prepare_simulation(row, place_id, config, place_specific_params):
     params : Dicionário de parâmetros de entrada do simulador.
     """
 
-    # based on Alison Hill: 40% asymptomatic
-    symtomatic = [
-        int(
-            row["active_cases"]
-            * (1 - config["br"]["seir_parameters"]["asymptomatic_proportion"])
-        )
-        if not np.isnan(row["active_cases"])
-        else 1
-    ][0]
-
     # Set parameters for the model
     params = {
         "population_params": {
             "N": int(row["population"]),
-            "I": symtomatic,
+            "I": int(row["active_cases"]),
             "D": [int(row["deaths"]) if not np.isnan(row["deaths"]) else 0][0],
         },
         "place_specific_params": {
-            "fatality_ratio": place_specific_params["fatality_ratio"].loc[
-                int(row.name)
+            "fatality_ratio": place_specific_params.at[
+                row["state_num_id"], "fatality_ratio",
             ],
-            "i1_percentage": place_specific_params["i1_percentage"].loc[int(row.name)],
-            "i2_percentage": place_specific_params["i2_percentage"].loc[int(row.name)],
-            "i3_percentage": place_specific_params["i3_percentage"].loc[int(row.name)],
+            "i0_percentage": place_specific_params.at[
+                row[place_id], "i0_percentage"
+            ],
+            "i1_percentage": place_specific_params.at[
+                row[place_id], "i1_percentage"
+            ],
+            "i2_percentage": place_specific_params.at[
+                row[place_id], "i2_percentage"
+            ],
+            "i3_percentage": place_specific_params.at[
+                row[place_id], "i3_percentage"
+            ],
+            "rt": row["rt_most_likely"],
         },
-        "n_beds": row["number_beds"]
-        * config["br"]["simulacovid"]["resources_available_proportion"],
-        "n_icu_beds": row["number_icu_beds"]
-        * config["br"]["simulacovid"]["resources_available_proportion"],
+        "n_beds": row.get("number_beds", np.nan)
+            * config["br"]["simulacovid"]["resources_available_proportion"],
+        "n_icu_beds": row.get("number_icu_beds", np.nan)
+            * config["br"]["simulacovid"]["resources_available_proportion"],
         "R0": {
             "best": row["rt_most_likely"],  # Só usamos o "best" com o valor + provável do Rt para classificação do indicador
             "worst": row["rt_high_95"],
         },
     }
-
+    
     # Doens't have projection: if notification rate null or zero
     if row["notification_rate"] != row["notification_rate"]:
         return np.nan

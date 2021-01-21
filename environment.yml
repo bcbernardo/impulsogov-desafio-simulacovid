@@ -1,0 +1,15 @@
+name: simulacovid
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pandas
+  - numpy
+  - scipy
+  - pyyaml
+  - requests
+  - jupyter
+  - scikit-learn
+  - plotly
+prefix: "./.venv"

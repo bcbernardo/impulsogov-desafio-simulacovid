@@ -1,5 +1,8 @@
 pandas
 numpy
 scipy
-yaml
+scikit-learn
+pyyaml
 requests
+jupyter
+plotly

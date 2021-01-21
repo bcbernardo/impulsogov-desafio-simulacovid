@@ -1,6 +1,12 @@
-<<<<<<< HEAD
-# project-local contains personal configuration choices and state
-/anaconda-project-local.yml
+# virtualenvs
+.venv
+env
+
+# build files and directoris
+build
+create
+dist
+*.egg-info
 
 # Files autocreated by Python
 __pycache__

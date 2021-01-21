@@ -1,0 +1,19 @@
+package:
+  name: simulacovid
+  version: "0.1.0"
+
+source:
+  path: ".."
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - pandas
+    - numpy
+    - scipy
+    - scikit-learn
+    - plotly
