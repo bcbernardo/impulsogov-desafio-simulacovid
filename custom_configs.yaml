@@ -203,10 +203,10 @@ br:
         doubling_rate: 1.15
         incubation_period: 5
         presymptomatic_period: 2  # Y. Liu, Funk, and Flasche 2020; Ganyani et al. 2020; Du et al. 2020
-        i0_percentage: 0.256 # 0.3 * previous i1 percentage (0.855)
-        i1_percentage: 0.599 # (1 - 0.3) * previous i1 percentage (0.5958) 
-        i2_percentage: 0.092 # (0.12 / (1.0 + 0.3))
-        i3_percentage: 0.019 # (0.025 / (1.0 + 0.3))
+        i0_percentage: 0.3 # Hill (2020), citing Bi et al. 2020; Mizumoto et al. 2020; Nishiura et al. 2020
+        i1_percentage: 0.5985 # 0.855 * (1.0 - 0.3)
+        i2_percentage: 0.084 # 0.12 * (1.0 - 0.3)
+        i3_percentage: 0.0175 # 0.025 * (1.0 - 0.3)
         infected_health_care_proportion: 0.05
         hospitalized_by_age_perc:
             "from_0_to_9": 0.00002
