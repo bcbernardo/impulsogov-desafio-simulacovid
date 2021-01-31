@@ -333,8 +333,6 @@ Para isso, utilizou-se a [raíz do erro quadrático médio
 os resíduos não explicados pelo modelo, na mesma escala original (número de
 infectados per capita) - ou seja, quanto menor, melhor.
 
-![Gráfico comparativo entre modelos SEIR e SEAPMDR](./images/plot.png)
-
 O procedimento completo para a comparação dos modelos encontra-se no notebook
 [`analysis.ipynb`]. Acima, reproduz-se uma visualização dos resultados,
 comparando as previsões de melhor cenário em até 90 dias para ambos os modelos.
