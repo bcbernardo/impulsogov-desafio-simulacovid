@@ -337,7 +337,7 @@ infectados per capita) - ou seja, quanto menor, melhor.
 
 O procedimento completo para a comparação dos modelos encontra-se no notebook
 [`analysis.ipynb`]. Acima, reproduz-se uma visualização dos resultados,
-comparando as previsões de melhor cenário em até 21 dias para ambos os modelos.
+comparando as previsões de melhor cenário em até 90 dias para ambos os modelos.
 
 Conforme se pode pode observar na figura, ambos os modelos tem resultados
 bastante parecidos nos primeiros dias. Porém, o modelo original (SEIR) tende a
