@@ -42,7 +42,7 @@ def _calculate_recovered(row, params):
 
 def prepare_simulation(row, place_id, config, place_specific_params):
     """
-    Calcula indicador de capacidade hospitalar 
+    Calcula indicador de capacidade hospitalar
 
     Params
     ------
@@ -55,7 +55,7 @@ def prepare_simulation(row, place_id, config, place_specific_params):
     place_specific_params : pd.Dataframe
         Tabela de taxa de hospitalização e mortalidade calculada por
         regional de saúde/estado
-        
+
     Returns
     -------
     params : Dicionário de parâmetros de entrada do simulador.
@@ -70,7 +70,7 @@ def prepare_simulation(row, place_id, config, place_specific_params):
         },
         "place_specific_params": {
             "fatality_ratio": place_specific_params.at[
-                row["state_num_id"], "fatality_ratio",
+                row[place_id], "fatality_ratio"
             ],
             "i0_percentage": place_specific_params.at[
                 row[place_id], "i0_percentage"
@@ -95,7 +95,13 @@ def prepare_simulation(row, place_id, config, place_specific_params):
             "worst": row["rt_high_95"],
         },
     }
-    
+
+    # add nosocomial proportion, if it was provided
+    if "nosocomial_proportion" in place_specific_params.keys():
+        params["place_specific_params"]["nosocomial_proportion"] = (
+            place_specific_params.at[row[place_id], "nosocomial_proportion"]
+        )
+
     # Doens't have projection: if notification rate null or zero
     if row["notification_rate"] != row["notification_rate"]:
         return np.nan

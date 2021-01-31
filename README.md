@@ -85,9 +85,12 @@ simulação do modelo SEIR original (arquivo `seir.py`) e do modelo modificado
 (SEAPMDR - arquivo `seapmdr.py`).
 - Diretório [`./notebooks`](./notebooks): contém os *notebooks* para gerar as
   simulações e análises.
+  - Arquivo [`nosocomial_cases.ipynb`]: *notebook* para extração e cálculo dos
+    casos de transmissão hospitalar da COVID-19.
   - Arquivo [`simulation.ipynb`]: *notebook* para a geração do histórico de
   previsões dos modelos SEIR e SEAPMDR.
-  - Arquivo [`analysis.ipynb`]:
+  - Arquivo [`analysis.ipynb`]: *notebook* com a análise comparativa do
+    desempenho dos modelos.
 - Dados: contém dados intermediários e finais da simulação e análise. Embora
 esses arquivos também possam ser gerados a partir dos notebooks e do [*fork* do
 repositório **coronacidades-datasource**][Coronacidades Fork], alguns deles
@@ -103,6 +106,7 @@ utilização da versão local.
     - Codificação: *UTF-8*.
     - Separador: **,**
 
+[`nosocomial_cases.ipynb`]: ./notebooks/nosocomial_cases.ipynb
 [`analysis.ipynb`]: ./notebooks/analysis.ipynb
 [`simulation.ipynb`]: ./notebooks/simulation.ipynb
 [`br-states-farolcovid-history.csv`]: ./data/br-states-farolcovid-history.csv
@@ -246,6 +250,76 @@ seguintes:
 
 ![Fórmulas para o modelo SEAPMDR](./images/formulas_updated.png)
 
+#### Novo na v0.2.0: recálculo dos *betas* e transmissão hospitalar
+
+A partir da versão v0.2.0, as equações para estimar as taxas de transmissão
+(*betas*) de cada compartimento do modelo SEAPMDR foram recalculadas, com
+premissas mais adequadas a existência dos compartimentos *assintomáticos* e
+*pré-sintomáticos*.
+
+Das notas que acompanham a atualização realizada por [Hill (2020)], foram
+seguidas as suposições de que os indivíduos nos compartimentos E<sub>1</sub>,
+I<sub>0</sub> e I<sub>1</sub> apresentam taxas idênticas de transmissão
+(**β<sub>E</sub>=β<sub>0</sub>=β<sub>1</sub>**). Também se manteve a suposição da
+implementação original de que a taxa de transmissão é idêntica entre os
+compartimentos I<sub>2</sub> e I<sub>3</sub> (**β<sub>2</sub>=β<sub>3</sub>**)).
+
+Por outro lado, não se encontrou uma implementação detalhada que calculasse as
+taxas de transmissão de forma dinâmica de acordo com o decorrer da epidemia; e
+que, ao mesmo tempo, incluísse compartimentos assintomáticos, pré-sintomáticos
+e sintomáticos em diferentes níveis de gravidade. Desse modo, o cálculo das
+taxas de transmissão partiu das suposições acima e da relação entre as taxas de
+transmissão por unidade de tempo, a taxa de reprodução efetiva local
+(**R<sub>t</sub>**) e o tempo médio em que um indivíduo permanece transmissível
+(**t<sub>avg</sub>**):
+
+<!-- $$
+E_1 . \beta_E + I_0 . \beta_0 + I_1 . \beta_1 + I_2 . \beta_2 + I_3 . \beta_3 =
+\frac{(E_1+I_0+I_1+I_2+I_3).R_t}{t_{avg}}
+$$ -->
+
+![Equação relacionando as taxas de transmissão - betas -, a taxa de reprodução
+e o tempo médio da transmissão](./images/equation_betas_vs_Rt.png)
+
+onde **t<sub>avg</sub>** pode ser calculado como média dos tempos que os indivíduos
+com diferentes progressões da doença passam em cada compartimento, ponderada
+pela proporção com que essas progressões aparecem no total de infectados (I):
+
+<!-- $$
+t_{avg} = \frac{I_0.(t_{E_1} + t_{I_0}) + I_1.(t_{E_1} + t_{I_1}) + I_2.(t_{E_1} + t_{I_1} + t_{I_2}) + I_3.(t_{E_1} + t_{I_1} + t_{I_2} + t_{I_3})}{I}
+$$ -->
+
+![Cálculo do tempo médio que um indivíduo infectado permanece
+transmissível](./images/equation_t_avg.png)
+
+Para calcular as taxas de transmissão, foram calculadas as taxas de transmissão
+hospitalar (nosocomial), a partir de dados da vigilância epidemiológica da
+Síndrome Respiratória Aguda Grave do Ministério da Saúde (mais detalhes no
+[respectivo notebook][`nosocomial_cases.ipynb`]). O contato com indivíduos nos
+compartimentos I<sub>2</sub> e I<sub>3</sub> foi considerado como o único
+responsável por esse tipo de transmissão, ao passo que assumiu-se que
+indivíduos nesses compartimentos não participam da transmissão não-nosocomial.
+
+Com isso, torna-se possível calcular a relação entre os *betas* dos
+compartimentos hospitalizados e não-hospitalizados, tal que, em um intervalo de
+tempo qualquer:
+
+<!-- $$
+\frac{I_2.\beta_2 + I_3.\beta_3}{E_1.\beta_E + I_0.\beta_0 + I_1.\beta_1}=\frac{eventos\ de\ transmissão\ nosocomial}{eventos\ de\ transmissão\ não-nosocomial}
+$$ -->
+
+![Cálculo da relação entre os betas ligados e não ligados à transmissão hospitalar](./images/equation_nosocomial_vs_other.png)
+
+A nova implementação calcula os *betas* a partir de um sistema de equações que considera as suposições mencionadas acima e os valores verificados ou estimados para:
+
+- o **R<sub>t</sub>** (fornecido pelo FarolCovid);
+- o **t<sub>avg</sub>** (calculado a partir dos tempos de permanência típicos
+  em cada compartimento e da proporção entre indivíduos nos compartimentos
+  transmissíveis);
+- a proporção de casos nosocomiais (estimado a partir da vigilância da SRAG); e
+- o número de pessoas em cada compartimento (estimado pelo modelo a partir de
+  dados do FarolCovid).
+
 [Yang, Lombardi Jr. e Yang (2020a)]: https://arxiv.org/abs/2004.05715
 [Yang, Lombardi Jr. e Yang (2020b)]: https://doi.org/10.1101/2020.10.11.20210831
 
@@ -277,6 +351,28 @@ Ao contrário da hipótese proposta, o modelo SEAPMDR não apresenta desempenho
 superior ao modelo com menor número de compartimentos. Ao contrário, sobretudo
 a partir do 18º dia de previsão, ele demonstra resíduos maiores em várias
 ordens de grandeza do que o modelo SEIR, mais simples.
+
+## Registro de mudanças
+
+### v0.2.0
+
+- Correção do cálculo do número de indivíduos expostos, a partir do número de
+  indivíduos assintomáticos e sintomáticos moderados.
+- Correção no cálculo do intervalo em que o número de casos dobra (*doubling
+  time*) a partir da taxa de transmissão efetiva local.
+- Reformulação completa no cálculo das taxas de transmissão (*betas*) dos
+  compartimentos do modelo SEAPMDR, adequando os pressupostos à existência dos
+  compartimentos de *assintomáticos* e *pré-sintomáticos*.
+- Criação de [notebook][`nosocomial_cases.ipynb`] para extração e cálculo da
+  proporção de casos relacionados à transmissão hospitalar da COVID-19.
+
+### v0.1.0
+
+- Implementação do modelo SEAPMDR.
+- Criação dos notebooks para [execução das simulações][`simulation.ipynb`]
+  modificadas e para [análise comparativa][`analysis.ipynb`] dos modelos.
+- Criação do [README.md](./README.md) com a contextualização do desafio e das
+  modificações e análises realizadas.
 
 ## Licença
 

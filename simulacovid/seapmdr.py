@@ -32,28 +32,29 @@ def _calculate_exposed(
     t_avg = _calculate_avg_time(place_specific_params, disease_params)
     doubling_time = np.log(2) / (Rt / t_avg)
 
-    # calculate total number of exposed people
-    e_perc = (doubling_time - 1) * disease_params["incubation_period"]
-    exposed_total = population_params["I"] * (
-        place_specific_params["i0_percentage"]
-        + place_specific_params["i1_percentage"]
-    ) * e_perc
-
-    # true latent exposed population (not infectious yet)
-    exposed_latent = (
-        exposed_total * (disease_params["incubation_period"]
-                         - disease_params["presymptomatic_period"])
-        / disease_params["incubation_period"]
+    # E1(t=0) = (I0(t=1) + I1(t=1) - I0(t=0) - I1(t=0))/sigma1
+    # (I0(t=1) + I1(t=1)) = 2^(1/doubling_time) * (I0(t=0) + I1(t=0))
+    # (analog to the original method; SEE https://farolcovid.coronacidades.org)
+    asymptomatic = (
+        population_params["I"] * place_specific_params["i0_percentage"]
+    )
+    mild = population_params["I"] * place_specific_params["i1_percentage"]
+    exposed_presymptomatic = (
+        (2 ** (1 / doubling_time) - 1) * (asymptomatic + mild)
+        / (1 / disease_params["presymptomatic_period"])
     )
 
-    # exposed, pre-symptomatic population (already infectious)
-    exposed_presymptomatic = (
-        exposed_total * disease_params["presymptomatic_period"]
-        / disease_params["incubation_period"]
+    # Also discretizing the model equations:
+    # E0(t=0) = (E1(t=1) - E1(t=0))/sigma0
+    # E1(t=1) = 2^(1/doubling_time) * E1(t=0)
+    exposed_latent = (
+        (2 ** (1 / doubling_time) - 1) * exposed_presymptomatic
+        / (1 / (disease_params["incubation_period"]
+                - disease_params["presymptomatic_period"]))
     )
 
     return {
-        "total": exposed_total,
+        "total": exposed_latent + exposed_presymptomatic,
         "latent": exposed_latent,
         "presymptomatic": exposed_presymptomatic,
     }
@@ -67,7 +68,7 @@ def prepare_states(
 
     Params
     --------
-    population_param: dict
+    population_params: dict
             Explicit population parameters:
                     - N: population
                     - I: infected
@@ -179,7 +180,7 @@ def prepare_disease_params(
         "mu": frac_critical_to_death / disease_params["critical_duration"],
     }
 
-    # RECALCULATING THE BETAS
+    # NOTE: RECALCULATING THE BETAS
     #
     # By definition of the betas (transmission rate for a compartment in a
     # period of time) and the effective reproduction number - Rt (average
@@ -191,38 +192,51 @@ def prepare_disease_params(
     # calculated as the weighted average of how much time each particular
     # outcome stays in each compartment.
 
-    # We assume the transmission rate is equal amongst all non-hospitalized 
-    # compartiments (beta_e = beta_0 = beta_1), in one side; and amongst all 
+    # We assume the transmission rate is equal amongst all non-hospitalized
+    # compartiments (beta_e = beta_0 = beta_1), in one side; and amongst all
     # hospitalized compartiments (beta_2 = beta_3), on the other side.
 
-    # The disease params state that 5% of the transmissions affect healthcare
-    # workers. For simplicity, we assume that all cases amongst healthcare
+    # The ratio between these two groups of transmission rates can be inferred
+    # from the proportion of nosocomial (in-hospital) cases within the total.
+
+    # When provided, this proportion is extracted from the place-specific
+    # parameters. Otherwise, a fixed proportion (5% of the transmissions,
+    # mainly affecting healthcare workers) is assumed from the disease
+    # parameters. For simplicity, we assume that all cases amongst healthcare
     # workers come from the contact with hospitalized (I2 and I3) patients,
-    # and that these patients do not contribute for the transmission to 
-    # non-healthcare workers. Therefore, we can state that:
-    #     (E1*beta_E + I0*beta_0 + I1*beta_1)/(I2*beta_2 + I3*beta_3) 
+    # and that these patients do not contribute for the transmission to
+    # non-healthcare workers.
+
+    # For example, with a 5% nosocomial transmission, we could state that:
+    #     (E1*beta_E + I0*beta_0 + I1*beta_1)/(I2*beta_2 + I3*beta_3)
     #     = 0.95/0.05 = 19
 
-    # The following lines develop this assumptions to calculate the betas
+    # The following lines develop these assumptions to calculate the betas
     # from the disease and the place-specific parameters:
 
     # Calculate average infectious duration
     t_avg = _calculate_avg_time(place_specific_params, disease_params)
+
+    # get the proportion of nosocomial infections (or stick to the default of
+    # proportion of cases amongst healthcare workers, if it wasn't provided)
+    nosocomial_prop = place_specific_params.get(
+        "nosocomial_proportion",
+        disease_params["infected_health_care_proportion"],
+    )
+    nosocomial_prop = max(10 ** (-6), nosocomial_prop)  # avoid zero
 
     # Calculate beta_2 and beta_3
     beta_2 = (
         (population_params["E1"] + population_params["I1"] +
          population_params["I2"] + population_params["I3"]) * Rt
         / (t_avg * (population_params["I2"] + population_params["I3"])
-           * (1 + (1-disease_params["infected_health_care_proportion"])
-           / disease_params["infected_health_care_proportion"]))
+           * (1 + (1-nosocomial_prop) / nosocomial_prop))
     )
     beta_3 = beta_2
 
     # Calculate beta_E, beta_0 and beta_1
     beta_E = (
-        ((1-disease_params["infected_health_care_proportion"])
-         / disease_params["infected_health_care_proportion"])
+        ((1-nosocomial_prop) / nosocomial_prop)
         * (population_params["I2"]*beta_2 + population_params["I3"]*beta_3)
         / (population_params["E1"] + population_params["I0"]
             + population_params["I1"])
@@ -230,57 +244,24 @@ def prepare_disease_params(
     beta_0 = beta_E
     beta_1 = beta_E
 
-    print(f"Beta E/0/1: {beta_E}")
-    print(f"Beta 2/3: {beta_2}")
+    print(
+        f"Rt: {Rt}\nAverage infectious period: {t_avg}\nNosocomial prop.: " +
+        f"{nosocomial_prop}\nBeta E, 0, 1: {beta_E}\nBeta 2, 3: {beta_2}\n" +
+        "--------------------------------------------"
+    )
 
+    # make betas per capita and add to parameters
+    N = sum(
+        param_value for param_key, param_value in population_params.items()
+        if param_key in ["S", "E", "I0", "I1", "I2", "I3"]
+    )
     parameters.update({
-        "betaE": beta_E,
-        "beta0": beta_0,
-        "beta1": beta_1,
-        "beta2": beta_2,
-        "beta3": beta_3,
+        "betaE": beta_E/N,
+        "beta0": beta_0/N,
+        "beta1": beta_1/N,
+        "beta2": beta_2/N,
+        "beta3": beta_3/N,
     })
-    # # Assuming betaE with 0.25 * R (as does Hill(2020))
-    # parameters["betaE"] = (
-    #     0.25
-    #     * (1 / disease_params["presymptomatic_period"])
-    #     * Rt
-    #     / population_params["N"]
-    # )
-
-    # # beta0 = beta1, with both summing (0.9 - 0.25) * R0 = 0.65 * R0
-    # # and ( R_I0 / R_I1 ) = ( i0_percentage * asymptomatic_duration
-    # #                        / i1_percentage * mild_duration)
-    # # (each compartiment's relative contribution to R0 depends only on the
-    # #  proportion of people on each one of them and their duration)
-    # parameters["beta1"] = (
-    #     (0.65 * Rt)
-    #     / (1 + (
-    #             place_specific_params["i0_percentage"]
-    #             * disease_params["asymptomatic_duration"]
-    #         ) / (
-    #             place_specific_params["i1_percentage"]
-    #             * disease_params["mild_duration"]
-    #         )
-    #     )
-    #     * (1 / disease_params["mild_duration"])
-    #     / population_params["N"]
-    # )
-    # parameters["beta0"] = parameters["beta1"]
-
-    # # And beta2 = beta3 with 0.1 * R0
-    # x = (
-    #     (1 / disease_params["mild_duration"])
-    #     * (1 / disease_params["severe_duration"])
-    #     * (1 / disease_params["critical_duration"])
-    # )
-    # y = (
-    #     parameters["p1"] * (1 / disease_params["critical_duration"])
-    #     + parameters["p1"] * parameters["p2"]
-    # )
-
-    # parameters["beta3"] = 0.1 * (x / y) * Rt / population_params["N"]
-    # parameters["beta2"] = parameters["beta3"]
 
     return parameters
 
@@ -365,11 +346,15 @@ def SEAPMDR(y, t, model_params, initial=False):
 
 
 def entrypoint(
-    population_params, place_specific_params, disease_params, phase, initial=False
+    population_params,
+    place_specific_params,
+    disease_params,
+    phase,
+    initial=False,
 ):
     """
     Function to receive user input and run model.
-    
+
     Params
     --------
     population_params: dict
@@ -389,11 +374,11 @@ def entrypoint(
 
     disease_params: dict
         Parameters of model dynamic (transmission, progression, recovery and death rates)
-                                 
+
     phase: dict
-       Scenario and days to run 
+       Scenario and days to run
             - scenario
-            - date      
+            - date
 
     Return
     -------
