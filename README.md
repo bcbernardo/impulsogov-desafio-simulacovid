@@ -327,28 +327,135 @@ A nova implementação calcula os *betas* a partir de um sistema de equações q
 
 Foi realizada uma análise comparativa de ambos os modelos, considerando o quão
 próximas as suas previsões estiveram da realidade dos registros já observados.
-
-Para isso, utilizou-se a [raíz do erro quadrático médio
-(RMSE)](https://en.wikipedia.org/wiki/Root-mean-square_deviation), que expressa
-os resíduos não explicados pelo modelo, na mesma escala original (número de
-infectados per capita) - ou seja, quanto menor, melhor.
+Foram utilizadas três estratégias de visualização e análise: comparação da
+curva de contágios em simulações específicas; análise dos resíduos per capita;
+e análise da raíz do erro quadrático médio.
 
 O procedimento completo para a comparação dos modelos encontra-se no notebook
-[`analysis.ipynb`]. Acima, reproduz-se uma visualização dos resultados,
-comparando as previsões de melhor cenário em até 90 dias para ambos os modelos.
+[`analysis.ipynb`]. Os principais resultados são apresentados a seguir.
 
-Conforme se pode pode observar na figura, ambos os modelos tem resultados
-bastante parecidos nos primeiros dias. Porém, o modelo original (SEIR) tende a
-manter resíduos significativamente menores do que o modelo modificado (SEAPMDR)
-a partir do 18º dia, quando o resíduo desse segundo modelo aumenta em mais de
-uma ordem de grandeza.
+#### Comparação das curvas de contágio a partir de simulações
+
+Como primeira estratégia de comparação, verificou-se como a curva de casos real
+se comporta em relação às curvas de casos previstas pelos modelos SEIR e
+SEAPMDR em um dado território.
+
+Os gráficos a seguir demonstram o resultados das previsões para o Espírito
+Santo em três datas - 01/05/2020, 01/08/2020 e 01/11/2020 -. No notebook
+[`analysis.ipynb`] é possível realizar a mesma análise para qualquer período
+com dados disponíveis e para qualquer Unidade Federativa, bem como para o
+conjunto do território nacional.
+
+**ATENÇÃO:** os gráficos a seguir possuem escalas diferentes entre si.
+
+![Casos previstos pelos modelos SEIR e SEAPMDR versus casos observados no
+Espírito Santo, entre 1 de maio de 2020 e 31 de julho de
+2020](./images/predXobs_es_202007_202005.png)
+
+![Casos previstos pelos modelos SEIR e SEAPMDR versus casos observados no
+Espírito Santo, entre 1 de agosto de 2020 e 31 de outubro de
+2020](./images/predXobs_es_202010_202008.png)
+
+![Casos previstos pelos modelos SEIR e SEAPMDR versus casos observados no
+Espírito Santo, entre 1 de novembro de 2020 e 31 de dezembro de
+2020](./images/predXobs_es_202012_202011.png)
+
+Essa análise permite visualizar como cada um dos modelos performam com a
+simulação sendo iniciada em diferentes momentos do curso da epidemia. Em geral,
+por exemplo, ambos os modelos superestimam fortemente o pico inicial de
+contágios. Nesse quesito, o modelo SEAPMDR supera o modelo SEIR, prevendo uma
+curva inicial de casos menos aguda - mas ainda significativamente superior à
+que foi efetivamente observada.
+
+Na fase de agosto a outubro, em que ocorre uma queda de casos, ambos os modelos acompanham a tendência geral da curva de casos ativos. O modelo SEAPMDR, porém, tende a subestimar o número de casos, enquanto o modelo SEIR tende a superestimá-lo.
+
+Finalmente, na fase de novembro a dezembro, há um repique de casos que não é
+acompanhado por nenhum dos modelos, que, na simulação realizada em 01/11/2020,
+tendiam a prever queda ou estabilidade de casos, mesmo no pior cenário.
+
+#### Análise dos resíduos per capita
+
+Como forma de analisar o comportamento padrão de cada um dos modelos, para além do momento da epidemia em que foram aplicados, buscou-se visualizar a distribuição dos resíduos - isto é, a diferença entre o número de casos ativos previstos pelos modelos, em relação ao número efetivamente observado.
+
+Essa análise de resíduos foi consolidada no gráfico *boxplot* reproduzido
+abaixo, em que o eixo vertical é a diferença entre o previsto e o observado (em
+número de casos por mil habitantes); e o eixo horizontal é o número de dias de
+antecedência com que a simulação foi executada. A divisão do resíduo pelo
+número de habitantes foi realizada para permitir comparar, em uma mesma
+distribuição, observações em diferentes Unidades Federativas.
+
+![Gráfico de boxplots com a distribuição dos resíduos por mil habitantes em
+relação ao número de dias de antecedência da
+simulação](./images/seirXseapmdr_boxplot.png)
+
+Conforme o esperado, a dispersão dos resíduos é maior quanto maior é o
+intervalo entre a simulação e a data cujo número de casos se tenta prever -
+indicando que os modelos tendem a cometer mais erros extremos, para mais e para
+menos, quando são utilizados para prever a situação epidemiológica daqui a
+vários meses. No entanto, essa tendência é significativamente maior no modelo
+SEIR do que no SEAPMDR, indicando que o modelo SEAPMDR pode ser preferível
+quando se trata de previsões em prazos mais longos.
+
+Quanto à tendência central e a posição do primeiro e terceiro quartis (extremos
+da "caixa" do *boxplot*), esses demonstram que o modelo SEAPMDR têm uma
+tendência maior do que o modelo SEIR a **subestimar** o número de casos. Nas
+previsões de mais curto prazo (15 e 30 dias), a mediana do modelo SEIR se
+encontra mais próxima ao zero, ao passo que, a partir daí, tende cada vez mais
+à parte superior do gráfico - o que denota uma tendência à superestimativa dos
+casos.
+
+#### Raíz do Erro Quadrático Médio
+
+Outra maneira de analisar os resíduos dos modelos é por meio da [raíz do erro
+quadrático médio (RMSE)][RMSE], que expressa os resíduos não explicados pelo
+modelo na mesma escala original (número de casos ativos per mil habitantes).
+Quanto menor o RMSE, mais o modelo tende a acertar - um modelo com RMSE igual a
+0 sempre acerta as suas previsões
+
+![Comparação do erro quadrático médio dos modelos SEIR e SEAPMDR, em função do número de dias de antecedência da simulação](./images/seirXseapmdr_rmse.png)
+
+Em ambos os cenários considerados, nota-se que o modelo SEAPMDR performa
+significativamente melhor (tem menor RMSE) em previsões realizadas com mais de
+30 dias de antecedência. Apenas no pior cenário e durante o 7º ao 30º dia de
+previsões o modelo SEIR tem um desempenho razoavelmente superior -  no melhor
+cenário, a vantagem é negligenciável e ocorre apenas do 9º ao 19º dias.
+
+[RMSE]: https://en.wikipedia.org/wiki/Root-mean-square_deviation
 
 ### Conclusão
 
-Ao contrário da hipótese proposta, o modelo SEAPMDR não apresenta desempenho
-superior ao modelo com menor número de compartimentos. Ao contrário, sobretudo
-a partir do 18º dia de previsão, ele demonstra resíduos maiores em várias
-ordens de grandeza do que o modelo SEIR, mais simples.
+As análises realizadas indicam que a versão do modelo com modificações e com a
+incorporação de compartimentos de indivíduos assintomáticos e pré-sintomáticos
+pode ser uma alternativa válida ao modelo SEIR implementado atualmente.
+
+A comparação das curvas de contágio a partir das simulações demonstra que o
+modelo SEAPMDR tende a prever picos menos agudos de casos. Esse comportamento é
+mais próximo ao que foi observado nos territórios analisados durante os
+primeiros meses da epidemia de SARS-CoV-2, embora também esse modelo tenha
+superestimado significativamente a curva de casos ativos à época.
+
+Além disso, a análise dos resíduos e do RMSE em função do número de dias de
+antecedência das simulações parece indicar que o modelo SEAPMDR performa
+razoavelmente melhor em previsões com prazos mais largos (acima de 30 dias).
+Esse fato pode ser significativo para garantir a capacidade de gestores
+planejarem a demanda hospitalar e decisões sobre restrições e medidas
+não-farmacológicas para deter os contágios a médio prazo.
+
+Por outro lado, o modelo proposto também traz limitações importantes. Assim
+como o modelo SEIR implementado originalmente, ele não foi capaz de prever a
+subida de casos a partir de novembro de 2020. Nesse sentido, implementações
+alternativas mencionadas na seção de [Hipóteses
+explicativas][#hipóteses-explicativas] (uso de dados da mobilidade, estimativas
+de subnotificação pelas internações por SRAG etc.) podem vir a complementar
+esse tipo de modelo, especialmente para obter estimativas mais acuradas e
+tempestivas da taxa de transmissão efetiva local e da taxa de subnotificação.
+
+Além disso, uma característica demonstrada no perfil das curvas de contágio e
+na análise dos resíduos é que o modelo SEAPDMR tem uma tendência maior a
+subestimar a curva de casos, sobretudo passado o pico inicial de contágios.
+Qualquer aplicação real do modelo deve levar em conta essa tendência,
+considerando que a função primordial de modelos simplificados é sugerir
+dinâmicas, mais do que prever números precisos.
 
 ## Registro de mudanças
 
@@ -363,6 +470,9 @@ ordens de grandeza do que o modelo SEIR, mais simples.
   compartimentos de *assintomáticos* e *pré-sintomáticos*.
 - Criação de [notebook][`nosocomial_cases.ipynb`] para extração e cálculo da
   proporção de casos relacionados à transmissão hospitalar da COVID-19.
+- Adicionadas novas análises por perfil da curva de contágios e valor nominal
+  (per capta) dos resíduos.
+- Adicionadas novas análises e conclusões no README.md.
 
 ### v0.1.0
 
