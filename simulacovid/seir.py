@@ -122,7 +122,7 @@ def prepare_disease_params(
 def SEIR(y, t, model_params, initial=False):
     """
     The SEIR model differential equations.
-    
+
     Params
     --------
     y: dict
@@ -134,7 +134,7 @@ def SEIR(y, t, model_params, initial=False):
               - I_3: infected critical
               - R: recovered
               - D: deaths
-            
+
     model_params: dict
            Parameters of model dynamic (transmission, progression, recovery and death rates)
 
